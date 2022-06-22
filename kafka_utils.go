@@ -11,6 +11,37 @@ import (
 	"github.com/hamba/avro"
 )
 
+func ParseSchemaAvroToJson(data []byte, schemaAvro string) ([]byte, error) {
+
+	schema, err := avro.Parse(schemaAvro)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var decodedAvro interface{}
+
+	err = avro.Unmarshal(schema, data[5:], &decodedAvro)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonStr []byte
+
+	err = json.Unmarshal(jsonStr, decodedAvro)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(jsonStr) <= 0 {
+		return nil, errors.New("erro ao deserializar os dados")
+	}
+
+	return jsonStr, nil
+}
+
 func ParseJsonFileToSchemaAvroByte(jsonFilePath, valueSchema string) ([]byte, error) {
 	schema, err := avro.Parse(valueSchema)
 
@@ -66,7 +97,7 @@ func SetIdToAvroJson(jsonAvro []byte, id uint32) []byte {
 
 	magicNumber := make([]byte, 5)
 
-	binary.BigEndian.PutUint32(magicNumber, 12345)
+	binary.BigEndian.PutUint32(magicNumber, id)
 
 	jsonAvro = append(magicNumber, jsonAvro...)
 	jsonAvro = append(zero, jsonAvro...)
