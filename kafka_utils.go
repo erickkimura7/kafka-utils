@@ -2,15 +2,61 @@ package utils
 
 import (
 	"encoding/binary"
-	"log"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"os"
+
+	"github.com/hamba/avro"
 )
 
-func GetIdFromAvro(value []byte) int32 {
-	id := int32(binary.BigEndian.Uint32(value[1:]))
+func ParseJsonFileToSchemaAvroByte(jsonFilePath, valueSchema string) ([]byte, error) {
+	schema, err := avro.Parse(valueSchema)
 
-	log.Println("id: ", id)
+	if err != nil {
+		return nil, err
+	}
 
-	return id
+	jsonFile, err := os.Open(jsonFilePath)
+
+	if err != nil {
+		return nil, err
+	}
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	generic := map[string]interface{}{}
+
+	if err := json.Unmarshal(byteValue, &generic); err != nil {
+		panic(err)
+	}
+
+	fmt.Println(generic)
+
+	data, err := avro.Marshal(schema, generic)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func GetIdFromAvro(bytes []byte) (int32, error) {
+
+	if bytes == nil {
+		return 0, nil
+	}
+
+	if bytes[0] != 0 {
+		return 0, errors.New("magic number not found")
+	}
+
+	id := int32(binary.BigEndian.Uint32(bytes[1:]))
+
+	return id, nil
 }
 
 func SetIdToAvroJson(jsonAvro []byte, id uint32) []byte {
@@ -24,8 +70,6 @@ func SetIdToAvroJson(jsonAvro []byte, id uint32) []byte {
 
 	jsonAvro = append(magicNumber, jsonAvro...)
 	jsonAvro = append(zero, jsonAvro...)
-
-	log.Println(string(jsonAvro))
 
 	return jsonAvro
 }
