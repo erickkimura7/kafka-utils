@@ -1,4 +1,4 @@
-package kafka_utils
+package utils
 
 import (
 	"encoding/binary"
